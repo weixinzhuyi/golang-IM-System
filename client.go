@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
 type Client struct {
@@ -11,6 +13,7 @@ type Client struct {
 	ServerPort int
 	Name       string
 	conn       net.Conn
+	flag       int
 }
 
 func NewClient(serverIp string, ServerPort int) *Client {
@@ -18,6 +21,7 @@ func NewClient(serverIp string, ServerPort int) *Client {
 	client := &Client{
 		ServerIp:   serverIp,
 		ServerPort: ServerPort,
+		flag:       999,
 	}
 
 	//建立与服务器的链接
@@ -30,6 +34,23 @@ func NewClient(serverIp string, ServerPort int) *Client {
 
 	//返回对象
 	return client
+}
+
+func (c *Client) menu() bool {
+	var flag int
+	fmt.Println("1.公聊模式")
+	fmt.Println("2.私聊模式")
+	fmt.Println("3.修改用户名")
+	fmt.Println("0.退出")
+	fmt.Scanln(&flag)
+
+	if flag >= 0 && flag <= 3 {
+		c.flag = flag
+		return true
+	} else {
+		fmt.Println("请输入正确的选项")
+		return false
+	}
 }
 
 var serverIp string
@@ -49,5 +70,50 @@ func main() {
 		return
 	}
 	fmt.Println(">>>>>Link Success!")
+	go client.DealResponse()
+	client.run()
+}
 
+func (c *Client) run() {
+	for c.flag != 0 {
+		for c.menu() != true {
+		}
+		switch c.flag {
+		case 1:
+			fmt.Println("选择公聊模式")
+		case 2:
+			fmt.Println("选择私聊模式")
+		case 3:
+			c.ChangeName()
+
+		}
+	}
+
+}
+
+func (c *Client) DealResponse() {
+
+	//监听服务器返回的消息并执行标准输出,永久阻塞监听
+	io.Copy(os.Stdout, c.conn)
+	//等价于
+	//for {
+	//	buf := make([]byte,4096)
+	//	c.conn.Read(buf)
+	//	fmt.Println(buf)
+	//}
+}
+
+func (c *Client) ChangeName() bool {
+	fmt.Println("请输入新用户名：")
+	newName := ""
+	fmt.Scanln(&newName)
+	sendMsg := "rename|" + newName + "\n"
+	_, err := c.conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("conn.Write err :", err)
+		return false
+	}
+
+	c.Name = newName
+	return true
 }
