@@ -67,7 +67,7 @@ func (s *Server) Handler(conn net.Conn) {
 	for {
 		select {
 		case <-isLive: //活跃不做任何处理
-		case <-time.After(time.Second * 10): //超时踢出
+		case <-time.After(time.Minute * 5): //超时踢出
 			user.SendMsg("You are out!")
 			close(user.C)
 			conn.Close()

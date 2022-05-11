@@ -58,16 +58,16 @@ func (u *User) SendMsg(msg string) {
 	u.conn.Write([]byte(msg))
 }
 
-//用户发消息的方法
+//用户处理消息的方法
 func (u *User) DoMessage(msg string) {
-	if msg == "who" {
+	if msg == "who" { //查询在线列表
 		u.server.mapLock.Lock()
 		for _, user := range u.server.OnlineMap {
 			onlineMsg := "[" + user.Addr + "]" + user.Name + ": is online\n"
 			u.SendMsg(onlineMsg)
 		}
 		u.server.mapLock.Unlock()
-	} else if len(msg) > 7 && msg[:7] == "rename|" {
+	} else if len(msg) > 7 && msg[:7] == "rename|" { //修改用户名
 		//修改用户名的格式 ：rename|XX
 		newName := strings.Split(msg, "|")[1]
 
@@ -85,6 +85,28 @@ func (u *User) DoMessage(msg string) {
 			u.SendMsg("OK!Your new name is :" + newName + "\n")
 		}
 
+	} else if len(msg) > 3 && msg[:3] == "to|" { //私聊功能
+		//消息格式：to|XX|内容
+		handledMsg := strings.Split(msg, "|")
+		//1.获得目标用户名
+		remoteName := handledMsg[1]
+		if remoteName == "" {
+			u.SendMsg("Your message format is wrong,the correct format is \" to|name|content\" ")
+			return
+		}
+		//2.根据用户名找到目标用户对象
+		remoteUser, ok := u.server.OnlineMap[remoteName]
+		if !ok {
+			u.SendMsg("The target user is not exist, please check your message!")
+			return
+		}
+		//3.通过对象的C通道发送消息
+		content := handledMsg[2]
+		if content == "" {
+			u.SendMsg("The content is not exist, please check your message!")
+			return
+		}
+		remoteUser.SendMsg(u.Name + "say :" + content)
 	} else {
 		u.server.BoardCast(u, msg)
 
